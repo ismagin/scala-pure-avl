@@ -46,11 +46,4 @@ object State {
     def modify[S](f: S => S): State[S, Unit] =
         get flatMap { s => put(f(s)) }
     
-    /**
-     * Applies a function to the state and saves the its value
-     * in the value part of the monad.
-     */
-    def gets[S, A](f: S => A): State[S, A] =
-        get map { s => f(s) }
-
 }
