@@ -213,6 +213,72 @@ object MonadExpansion {
             }
         val (emavl2, _) = expandedMonad2.run(AVLNode(4))
 
+
+        val expandedMonadAlt4 = State[AVLI, Unit] { s: AVLI => {
+          val (s1, a) = (modify { insert(2) }).run(s)  
+          val (s2, b) = (modify { insert(3) }).run(s1)
+          val (s3, c) = (modify { insert(7) }).run(s2)
+          val (s4, d) = (modify { insert (-2)} ).run(s3)
+          val (s5, e) = (modify { insert(12) }).run(s4)
+          (s5, () /* result of map */)
+        }}
+        val (emavla4, _) = expandedMonadAlt4.run(AVLNode(4))
+        assert(emavla4 == avl6)
+
+
+        val expandedMonadAlt2 = State[AVLI, Unit] { s: AVLI => {
+          val (s1, a) = (modify[AVLI] { insert(2) }).run(s)  
+
+          { _: Unit =>
+            State[AVLI, Unit] { s1: AVLI => {
+              val (s2, b) = (modify { insert(3) }).run(s1)
+
+              { _: Unit =>
+                State[AVLI, Unit] { s2: AVLI => {
+                  val (s3, c) = (modify { insert(7) }).run(s2)
+                  
+                  { _: Unit =>
+                    State[AVLI, Unit] { s3: AVLI => {
+                      val (s4, d) = (modify { insert (-2)} ).run(s3)
+
+                      { _: Unit =>
+                        State[AVLI, Unit] { s4: AVLI =>
+                          val (s5, e) = (modify { insert(12) }).run(s4)
+                          (s5, {_: Unit => ()}.apply(e))
+                        }
+                      }.apply(d).run(s4)
+                    }}
+                  }.apply(c).run(s3)
+                }}
+              }.apply(b).run(s2)
+            }}
+          }.apply(a).run(s1)
+        }}
+        val (emavla2, _) = expandedMonadAlt2.run(AVLNode(4))
+        assert(emavla2 == avl6)
+
+
+
+        val expandedMonadAlt = State[AVLI, Unit] { s: AVLI =>
+            {
+                val (s1, a) = (modify[AVLI] { insert(2) }).run(s)
+                
+                { _: Unit =>
+                    modify { insert(3) } flatMap { _ =>
+                        modify { insert(7) } flatMap { _ =>
+                            modify { insert(-2) } flatMap { _ =>
+                                modify { insert(12) } map { _ => () }
+                            }
+                        }
+                    }
+                }.apply(a).run(s1)
+            }
+        }
+        val (emavla, _) = expandedMonadAlt.run(AVLNode(4))
+        assert(emavla == avl6)
+
+
+
         // using modify to simplify the code
         val expandedMonad = modify { insert(2) } flatMap { _ =>
             modify { insert(3) } flatMap { _ =>
